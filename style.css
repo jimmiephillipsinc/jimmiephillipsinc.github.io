@@ -1,0 +1,119 @@
+/* General Body and Page Layout */
+body {
+    font-family: 'Arial', sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f2f2f2; /* Light grey background */
+    color: #333333; /* Dark grey text for main content */
+    line-height: 1.6;
+}
+
+/* Headings and Links */
+h1, h2, h3 {
+    color: #8B0000; /* Dark red for all headings */
+}
+
+a {
+    color: #8B0000;
+    text-decoration: none; /* Removes underline from links by default */
+}
+
+a:hover {
+    text-decoration: underline; /* Adds underline on hover for visual feedback */
+}
+
+/* Header Section */
+header {
+    background-color: #8B0000; /* Dark red background */
+    color: white;
+    padding: 2em 0;
+    text-align: center;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+header h1 {
+    color: white; /* Ensures the main title is white on the red background */
+    margin: 0;
+    font-size: 2.5em;
+}
+
+header p {
+    margin: 0.5em 0 0;
+    font-size: 1.2em;
+}
+
+/* Navigation Bar */
+nav {
+    background-color: #1a1a1a; /* Almost black for the nav bar */
+    text-align: center;
+    padding: 0.8em 0;
+}
+
+nav a {
+    color: white;
+    padding: 0 1.5em;
+    font-weight: bold;
+    transition: color 0.3s ease;
+}
+
+nav a:hover {
+    color: #f2f2f2; /* Light grey on hover */
+    text-decoration: none;
+}
+
+/* Main Content Container */
+.container {
+    width: 90%;
+    max-width: 1100px;
+    margin: 2em auto;
+    padding: 2em;
+    background-color: white;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+}
+
+/* Product Grid Layout */
+.product-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 30px;
+    margin-top: 2em;
+}
+
+.product-item {
+    border: 1px solid #cccccc;
+    padding: 1.5em;
+    text-align: center;
+    background-color: #ffffff;
+    border-radius: 8px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.product-item:hover {
+    transform: translateY(-5px); /* Lifts the box on hover */
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Call-to-action link inside product item */
+.product-item a {
+    display: inline-block;
+    margin-top: 1em;
+    padding: 0.5em 1.5em;
+    background-color: #8B0000;
+    color: white;
+    border-radius: 5px;
+}
+
+.product-item a:hover {
+    background-color: #660000; /* Darker red on hover */
+    text-decoration: none;
+}
+
+/* Footer Section */
+footer {
+    background-color: #1a1a1a; /* Almost black */
+    color: white;
+    text-align: center;
+    padding: 1.5em 0;
+    margin-top: 2em;
+}
