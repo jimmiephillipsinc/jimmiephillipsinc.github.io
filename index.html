@@ -1,0 +1,412 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG Workflow Overview</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f7fa;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+        }
+        .description {
+            margin-bottom: 30px;
+            text-align: center;
+            color: #34495e;
+            line-height: 1.6;
+        }
+        .graph-container {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .legend {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 0 15px;
+        }
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            margin-right: 8px;
+            border-radius: 4px;
+        }
+        .controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 0 5px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .node-text {
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Retrieval-Augmented Generation (RAG) Workflow</h1>
+        <div class="description">
+            <p>Retrieval-Augmented Generation (RAG) combines information retrieval with language generation to produce more accurate and contextually relevant responses. 
+            This workflow shows the key components and data flow in a typical RAG system.</p>
+        </div>
+        
+        <div class="controls">
+            <button id="startAnimation">Start Animation</button>
+            <button id="resetView">Reset View</button>
+        </div>
+        
+        <div class="graph-container">
+            <svg id="rag-flow" width="100%" height="600"></svg>
+        </div>
+        
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #3498db;"></div>
+                <span>Data/Input</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #e74c3c;"></div>
+                <span>Processing Component</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #2ecc71;"></div>
+                <span>Output/Result</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #f39c12;"></div>
+                <span>Knowledge Base</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Set up dimensions
+        const svg = d3.select("#rag-flow");
+        const width = svg.node().getBoundingClientRect().width;
+        const height = svg.node().getBoundingClientRect().height;
+        
+        // Define the data for nodes and links
+        const nodes = [
+            { id: "query", name: "User Query", x: width * 0.1, y: height * 0.2, type: "input", width: 120, height: 60 },
+            { id: "encode", name: "Query Encoder", x: width * 0.25, y: height * 0.2, type: "process", width: 140, height: 60 },
+            { id: "retrieve", name: "Retriever", x: width * 0.45, y: height * 0.2, type: "process", width: 120, height: 60 },
+            { id: "knowledge", name: "Knowledge Base\n(Documents, Database)", x: width * 0.45, y: height * 0.5, type: "knowledge", width: 160, height: 80 },
+            { id: "context", name: "Relevant Context\nPassages/Documents", x: width * 0.65, y: height * 0.2, type: "data", width: 160, height: 70 },
+            { id: "generator", name: "Response Generator\n(Large Language Model)", x: width * 0.8, y: height * 0.2, type: "process", width: 180, height: 80 },
+            { id: "response", name: "Generated Response", x: width * 0.9, y: height * 0.5, type: "output", width: 160, height: 60 }
+        ];
+        
+        const links = [
+            { source: "query", target: "encode", value: 1, label: "Raw query text" },
+            { source: "encode", target: "retrieve", value: 1, label: "Query embedding" },
+            { source: "retrieve", target: "context", value: 1, label: "Retrieved results" },
+            { source: "knowledge", target: "retrieve", value: 1, label: "Document retrieval" },
+            { source: "context", target: "generator", value: 1, label: "Context + Query" },
+            { source: "generator", target: "response", value: 1, label: "Generated text" }
+        ];
+        
+        // Define color scale
+        const colorScale = d3.scaleOrdinal()
+            .domain(["input", "process", "output", "knowledge", "data"])
+            .range(["#3498db", "#e74c3c", "#2ecc71", "#f39c12", "#3498db"]);
+        
+        // Add markers for arrows
+        svg.append("defs").append("marker")
+            .attr("id", "arrowhead")
+            .attr("refX", 25)
+            .attr("refY", 2)
+            .attr("markerWidth", 10)
+            .attr("markerHeight", 10)
+            .attr("orient", "auto")
+            .attr("markerUnits", "strokeWidth")
+            .append("path")
+            .attr("d", "M 0 0 L 6 2 L 0 4 z")
+            .attr("fill", "#666");
+            
+        // Add another marker for the reverse direction
+        svg.append("defs").append("marker")
+            .attr("id", "arrowhead-reverse")
+            .attr("refX", 5)
+            .attr("refY", 2)
+            .attr("markerWidth", 10)
+            .attr("markerHeight", 10)
+            .attr("orient", "auto")
+            .attr("markerUnits", "strokeWidth")
+            .append("path")
+            .attr("d", "M 0 0 L 6 2 L 0 4 z")
+            .attr("fill", "#666");
+        
+        // Draw links
+        const link = svg.selectAll(".link")
+            .data(links)
+            .enter().append("g")
+            .attr("class", "link-group");
+            
+        link.append("path")
+            .attr("class", "link")
+            .attr("fill", "none")
+            .attr("stroke", "#666")
+            .attr("stroke-width", 2)
+            .attr("marker-end", (d, i) => d.target === "response" ? "url(#arrowhead)" : 
+                                   d.source === "knowledge" ? "url(#arrowhead)" : "url(#arrowhead)")
+            .attr("marker-start", (d) => d.source === "knowledge" ? "url(#arrowhead-reverse)" : null)
+            .attr("d", d => {
+                const sourceNode = nodes.find(n => n.id === d.source);
+                const targetNode = nodes.find(n => n.id === d.target);
+                
+                // For the knowledge base to retriever link, create a curved path
+                if (d.source === "knowledge" && d.target === "retrieve") {
+                    return curvedPath(sourceNode, targetNode);
+                } else {
+                    return calculatePath(sourceNode, targetNode);
+                }
+            });
+            
+        // Add path labels
+        link.append("text")
+            .attr("class", "path-label")
+            .attr("font-size", 12)
+            .attr("fill", "#444")
+            .append("textPath")
+            .attr("xlink:href", (d, i) => `#path-${i}`)
+            .attr("startOffset", "50%")
+            .attr("text-anchor", "middle")
+            .text(d => d.label);
+            
+        // Function to calculate straight path between nodes
+        function calculatePath(source, target) {
+            const sx = source.x + (source.width / 2);
+            const sy = source.y + (source.height / 2);
+            const tx = target.x - (target.width / 2);
+            const ty = target.y + (target.height / 2);
+            
+            return `M ${sx} ${sy} L ${tx} ${ty}`;
+        }
+        
+        // Function to calculate curved path
+        function curvedPath(source, target) {
+            const sx = source.x + (source.width / 2);
+            const sy = source.y + (source.height / 2);
+            const tx = target.x + (target.width / 2);
+            const ty = target.y - (target.height / 2);
+            
+            const dx = (tx - sx) / 2;
+            const dy = (ty - sy) / 2;
+            
+            return `M ${sx} ${sy} C ${sx + dx} ${sy} ${sx + dx} ${ty} ${tx} ${ty}`;
+        }
+        
+        // Draw nodes
+        const node = svg.selectAll(".node")
+            .data(nodes)
+            .enter().append("g")
+            .attr("class", "node")
+            .attr("transform", d => `translate(${d.x - d.width/2}, ${d.y - d.height/2})`);
+            
+        // Add rectangles for nodes
+        node.append("rect")
+            .attr("width", d => d.width)
+            .attr("height", d => d.height)
+            .attr("rx", 8)
+            .attr("ry", 8)
+            .attr("fill", d => colorScale(d.type))
+            .attr("stroke", "#333")
+            .attr("stroke-width", 1)
+            .style("filter", "drop-shadow(0 2px 4px rgba(0,0,0,0.1))");
+            
+        // Add node labels
+        node.each(function(d) {
+            const g = d3.select(this);
+            const lines = d.name.split('\n');
+            const lineHeight = 14;
+            const totalHeight = lineHeight * lines.length;
+            const startY = (d.height / 2) - (totalHeight / 2) + lineHeight;
+            
+            lines.forEach((line, i) => {
+                g.append("text")
+                    .attr("class", "node-text")
+                    .attr("x", d.width / 2)
+                    .attr("y", startY + (i * lineHeight))
+                    .attr("text-anchor", "middle")
+                    .attr("fill", d.type === "knowledge" ? "white" : "white")
+                    .attr("font-weight", "bold")
+                    .text(line);
+            });
+        });
+        
+        // Animation functionality
+        let animationActive = false;
+        let currentStep = 0;
+        const steps = [
+            { nodes: ["query"], links: [] },
+            { nodes: ["encode"], links: ["query->encode"] },
+            { nodes: ["retrieve"], links: ["encode->retrieve"] },
+            { nodes: ["knowledge"], links: [] },
+            { nodes: ["context"], links: ["retrieve->context", "knowledge->retrieve"] },
+            { nodes: ["generator"], links: ["context->generator"] },
+            { nodes: ["response"], links: ["generator->response"] }
+        ];
+        
+        // Store original styles
+        const originalStyles = {
+            links: d3.selectAll(".link").style("stroke"),
+            nodes: new Map()
+        };
+        
+        d3.selectAll(".node rect").each(function(d) {
+            originalStyles.nodes.set(d.id, d3.select(this).attr("fill"));
+        });
+        
+        function highlightStep(step) {
+            // Reset all styles
+            d3.selectAll(".link")
+                .style("stroke", originalStyles.links)
+                .style("stroke-width", 2)
+                .style("stroke-dasharray", "none");
+                
+            d3.selectAll(".node rect")
+                .transition()
+                .duration(500)
+                .attr("fill", d => originalStyles.nodes.get(d.id));
+                
+            // Highlight current step
+            if (step.nodes) {
+                d3.selectAll(".node rect")
+                    .filter(d => step.nodes.includes(d.id))
+                    .transition()
+                    .duration(500)
+                    .attr("fill", "#e67e22")
+                    .transition()
+                    .duration(500)
+                    .attr("fill", d => colorScale(d.type));
+            }
+            
+            if (step.links) {
+                d3.selectAll(".link")
+                    .filter(d => step.links.includes(`${d.source}->${d.target}`))
+                    .transition()
+                    .duration(500)
+                    .style("stroke", "#e67e22")
+                    .style("stroke-width", 4)
+                    .style("stroke-dasharray", "10,5")
+                    .transition()
+                    .duration(500)
+                    .style("stroke", "#666")
+                    .style("stroke-width", 2)
+                    .style("stroke-dasharray", "none");
+            }
+        }
+        
+        function startAnimation() {
+            if (animationActive) return;
+            
+            animationActive = true;
+            currentStep = 0;
+            d3.select("#startAnimation")
+                .text("Running...")
+                .attr("disabled", true);
+                
+            function nextStep() {
+                if (currentStep < steps.length) {
+                    highlightStep(steps[currentStep]);
+                    currentStep++;
+                    setTimeout(nextStep, 1500);
+                } else {
+                    animationActive = false;
+                    d3.select("#startAnimation")
+                        .text("Start Animation")
+                        .attr("disabled", null);
+                }
+            }
+            
+            nextStep();
+        }
+        
+        function resetView() {
+            animationActive = false;
+            currentStep = 0;
+            d3.select("#startAnimation").text("Start Animation");
+            
+            d3.selectAll(".link")
+                .style("stroke", originalStyles.links)
+                .style("stroke-width", 2)
+                .style("stroke-dasharray", "none");
+                
+            d3.selectAll(".node rect")
+                .transition()
+                .duration(500)
+                .attr("fill", d => originalStyles.nodes.get(d.id));
+        }
+        
+        // Add event listeners
+        d3.select("#startAnimation").on("click", startAnimation);
+        d3.select("#resetView").on("click", resetView);
+        
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            // Update the width and height
+            const newWidth = svg.node().getBoundingClientRect().width;
+            const newHeight = svg.node().getBoundingClientRect().height;
+            
+            // Update nodes positions proportionally
+            nodes.forEach(node => {
+                node.x = (node.x / width) * newWidth;
+                node.y = (node.y / height) * newHeight;
+            });
+            
+            // Update SVG dimensions
+            svg.attr("width", newWidth).attr("height", newHeight);
+            
+            // Update links and nodes
+            d3.selectAll(".link path")
+                .attr("d", d => {
+                    const sourceNode = nodes.find(n => n.id === d.source);
+                    const targetNode = nodes.find(n => n.id === d.target);
+                    
+                    if (d.source === "knowledge" && d.target === "retrieve") {
+                        return curvedPath(sourceNode, targetNode);
+                    } else {
+                        return calculatePath(sourceNode, targetNode);
+                    }
+                });
+                
+            d3.selectAll(".node")
+                .attr("transform", d => `translate(${d.x - d.width/2}, ${d.y - d.height/2})`);
+        });
+    </script>
+</body>
+</html>
+```
